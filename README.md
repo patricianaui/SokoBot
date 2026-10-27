@@ -1,7 +1,7 @@
 # GDINTAI SokoBot
 
-**Author:** Rhyss Damien Medina
-**Contributor:** Patricia Naui
+**Author:** Rhyss Damien Medina\
+**Contributor:** Patricia Naui\
 **Language:** Python
 
 ## Overview

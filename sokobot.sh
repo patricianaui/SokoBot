@@ -7,4 +7,4 @@ MODE="raw"
 if [ "$2" = "--gui" ]; then
     MODE="bot"
 fi
-python -m src.main.driver "$1" $MODE
+python -m src.main.driver "$1" $MODE 

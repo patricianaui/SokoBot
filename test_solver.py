@@ -181,9 +181,9 @@ def main():
         total += 1
         bot = SokoBot()
 
-        start = time.time()
+        start = time.perf_counter() # updated to show higher precision times
         solution = bot.solveSokobanPuzzle(map_data.columns, map_data.rows, static_map, items)
-        elapsed = time.time() - start
+        elapsed = time.perf_counter() - start
 
         # TODO: MAP ERROR HANDLING
         if solution == "" or solution is None:
@@ -203,7 +203,7 @@ def main():
             else:
                 validation = f"FAIL: {msg}"
 
-        print(f"{map_name:<14} {crates:<7} {status:<10} {move_count:<8} {elapsed:<10.2f} {validation}")
+        print(f"{map_name:<14} {crates:<7} {status:<10} {move_count:<8} {elapsed:<10.4f} {validation}")
 
     print("=" * 85)
     print(f"Results: {passed}/{total} maps solved and validated")

@@ -85,7 +85,7 @@ def find_dead_squares(map_data, targets, width, height):
     """
     dead = set()
 
-    # --- Step 1: Find corner dead squares ---
+    # 1: find corner dead squares
 
     for r in range(height):
         for c in range(width):
@@ -98,15 +98,12 @@ def find_dead_squares(map_data, targets, width, height):
             wall_left = (c == 0) or (map_data[r][c - 1] == '#')
             wall_right = (c == width - 1) or (map_data[r][c + 1] == '#')
 
-            # A corner has a wall on at least one vertical side
-            # AND at least one horizontal side.
+            # a corner has a wall on at least 1 vertical side and at least 1 horizontal side
             if (wall_up or wall_down) and (wall_left or wall_right):
                 dead.add((r, c))
 
-    # --- Step 2: Find wall-line dead squares (horizontal) ---
-    # For each row, find pairs of corner dead squares and check if
-    # the entire segment between them has a continuous wall above
-    # or below with no targets.
+    # 2: find wall-line dead squares (horizontal)
+    # for each row, find pairs of corner dead squares and check if the entire segment between them has a continuous wall above or below with no targets
 
     for r in range(height):
         # Collect corner dead squares in this row.
@@ -120,7 +117,7 @@ def find_dead_squares(map_data, targets, width, height):
                 c1 = corners_in_row[i]
                 c2 = corners_in_row[j]
 
-                # Check that all squares between c1 and c2 are floor.
+                # check that all squares between c1 and c2 are floor
                 has_wall = False
                 for c in range(c1 + 1, c2):
                     if map_data[r][c] == '#':
@@ -129,7 +126,7 @@ def find_dead_squares(map_data, targets, width, height):
                 if has_wall:
                     continue
 
-                # Check that there are no targets between the corners.
+                # check that there are no targets between the corners
                 has_target = False
                 for c in range(c1 + 1, c2):
                     if (r, c) in targets:
@@ -138,14 +135,14 @@ def find_dead_squares(map_data, targets, width, height):
                 if has_target:
                     continue
 
-                # Check for a continuous wall above the entire segment.
+                # check for a continuous wall above the entire segment
                 wall_above = True
                 for c in range(c1, c2 + 1):
                     if r > 0 and map_data[r - 1][c] != '#':
                         wall_above = False
                         break
 
-                # Check for a continuous wall below the entire segment.
+                # check for a continuous wall below the entire segment
                 wall_below = True
                 if not wall_above:
                     for c in range(c1, c2 + 1):
@@ -157,11 +154,10 @@ def find_dead_squares(map_data, targets, width, height):
                     for c in range(c1 + 1, c2):
                         dead.add((r, c))
 
-    # --- Step 3: Find wall-line dead squares (vertical) ---
-    # Same logic applied to columns.
+    # 3: find wall-line dead squares (vertical)
 
     for c in range(width):
-        # Collect corner dead squares in this column.
+        # collect corner dead squares in this column
         corners_in_col = []
         for r in range(height):
             if (r, c) in dead:
@@ -230,13 +226,13 @@ def is_deadlocked(crate_positions, crate_set, targets, map_data, width, height):
        are filled), and at least one crate in that block is not on
        a target, the puzzle is unsolvable.
     """
-    # --- Check 1: 2x2 block deadlock ---
-    # Faster to check first since it doesn't require iteration.
+    # 1: 2x2 block deadlock 
+    # faster to check first since it doesn't require iteration
 
     for crate_row, crate_col in crate_positions:
-        # Check the 2x2 block with this crate as top-left.
+        # check the 2x2 block with this crate as top-left
         if crate_row + 1 < height and crate_col + 1 < width:
-            # All 4 cells must be wall or crate.
+            # all 4 cells must be wall or crate
             cells = [
                 (crate_row, crate_col),
                 (crate_row, crate_col + 1),
@@ -261,10 +257,8 @@ def is_deadlocked(crate_positions, crate_set, targets, map_data, width, height):
             if all_blocked and any_crate_off_target:
                 return True
 
-    # --- Check 2: Freeze deadlock ---
-    # Iteratively find frozen crates. A crate becomes frozen when it has
-    # a wall or previously-frozen crate on one horizontal side AND one
-    # vertical side, creating an immovable corner.
+    # 2: freeze deadlock
+    # iteratively find frozen crates; a crate becomes frozen when it has a wall or previously-frozen crate on 1 horizontal side and 1 vertical side, creating an immovable corner
 
     frozen = set()
     changed = True
@@ -275,7 +269,7 @@ def is_deadlocked(crate_positions, crate_set, targets, map_data, width, height):
             if (crate_row, crate_col) in frozen:
                 continue
 
-            # Check horizontal sides.
+            # check horizontal sides
             left_blocked = (
                 crate_col == 0
                 or map_data[crate_row][crate_col - 1] == '#'
@@ -287,7 +281,7 @@ def is_deadlocked(crate_positions, crate_set, targets, map_data, width, height):
                 or (crate_row, crate_col + 1) in frozen
             )
 
-            # Check vertical sides.
+            # check vertical sides
             up_blocked = (
                 crate_row == 0
                 or map_data[crate_row - 1][crate_col] == '#'
@@ -299,8 +293,7 @@ def is_deadlocked(crate_positions, crate_set, targets, map_data, width, height):
                 or (crate_row + 1, crate_col) in frozen
             )
 
-            # Frozen = blocked on at least one horizontal side
-            # AND at least one vertical side (forms a corner trap).
+            # frozen = blocked on at least 1 horizontal side and at least 1 vertical side (forms a corner trap)
             h_blocked = left_blocked or right_blocked
             v_blocked = up_blocked or down_blocked
 
@@ -308,7 +301,7 @@ def is_deadlocked(crate_positions, crate_set, targets, map_data, width, height):
                 frozen.add((crate_row, crate_col))
                 changed = True
 
-    # If any frozen crate is NOT on a target, it's a deadlock.
+    # if any frozen crate is NOT on a target, it's a deadlock
     for crate in frozen:
         if crate not in targets:
             return True
@@ -847,12 +840,16 @@ class SokoBot:
             A string of moves ('u','d','l','r') that solves the puzzle,
             or an empty string if already solved, unsolvable, or timed out.
         """
-        # Record when we started so we can stop before the 15-second limit.
-        start_time = time.time()
-        TIME_LIMIT = 14.5  # Stop a bit early to be safe.
-        TIME_CHECK_INTERVAL = 200  # Check the clock every N iterations.
+        # tracking metrics
+        nodesExpanded = 0
+        statesGenerated = 0
 
-        # --- Extract the initial game state ---
+        # record when we started so we can stop before the 15-second limit
+        start_time = time.time()
+        TIME_LIMIT = 14.5 
+        TIME_CHECK_INTERVAL = 200  # check the clock every n iterations
+
+        # extract the initial game state
 
         player_pos = find_player_position(itemsData, width, height)
         crate_positions = find_crate_positions(itemsData, width, height)
@@ -897,6 +894,7 @@ class SokoBot:
         open_list = []
         heapq.heappush(open_list, (h_start, h_start, counter, initial_state))
         counter = counter + 1
+        statesGenerated += 1
 
         # g_score[state] = best known number of pushes to reach this state.
         # In push-based search, g counts pushes only (not walking steps).
@@ -939,21 +937,23 @@ class SokoBot:
             if f_current > current_g + current_h:
                 continue
 
-            # Compute the player's reachable area and normalized position.
+            # compute the player's reachable area and normalized position
             crate_set = set(current_crates)
             reachable, norm_player = get_reachable_area(
                 current_player, crate_set, mapData, width, height
             )
             norm_key = (norm_player, current_crates)
 
-            # Skip if this normalized state was already processed.
+            # skip if this normalized state was already processed
             if norm_key in closed:
                 continue
             closed.add(norm_key)
 
-            # Check if this state is the goal.
+            nodesExpanded += 1 # state evaluated and expanded
+
+            # check if this state is the goal
             if is_goal_state(current_crates, targets):
-                # Reconstruct the full path including walking moves.
+                # reconstruct the full path including walking moves
                 return reconstruct_full_path(
                     came_from, current_state, mapData, width, height
                 )
@@ -990,6 +990,7 @@ class SokoBot:
                     f = new_g + h
                     heapq.heappush(open_list, (f, h, counter, new_state))
                     counter = counter + 1
+                    statesGenerated += 1
 
-        # The open list is empty — no solution exists.
+        # the open list is empty, no solution exists
         return ""

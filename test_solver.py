@@ -1,6 +1,6 @@
 """
 Test script for the SokoBot solver.
-Runs the solver on all provided maps, validates the solution,
+Runs the solver on all provided maps in the maps/ folder, validates the solution,
 and reports results.
 
 Usage: python test_solver.py
@@ -9,12 +9,19 @@ Usage: python test_solver.py
 import time
 import os
 import sys
+import re
 
 # Add the project root to the path so we can import the solver.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+project_root = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, project_root)
 
 from src.reader.file_reader import FileReader
 from src.solver.sokobot import SokoBot
+
+
+def natural_sort_key(s):
+    """Sort string names containing numbers in human/numerical order (e.g. 1, 2, ..., 10)."""
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
 
 
 def split_map(map_data):
@@ -135,13 +142,18 @@ def count_crates(items):
 def main():
     file_reader = FileReader()
 
-    # List of maps to test.
-    map_names = [
-        "testlevel",
-        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
-        "11", "12", "13", "14", "15",
-        "original1", "original2", "original3",
-    ]
+    # Dynamically discover all map files inside the root 'maps' folder
+    maps_dir = os.path.join(project_root, "maps")
+
+    if not os.path.exists(maps_dir):
+        print(f"Error: Maps directory not found at '{maps_dir}'")
+        return
+
+    # Retrieve all files in maps/ ignoring system hidden files (e.g. .DS_Store)
+    map_files = [f for f in os.listdir(maps_dir) if not f.startswith('.')]
+    
+    # Sort files in logical numerical order (1, 2, ..., 10 instead of 1, 10, 2)
+    map_files.sort(key=natural_sort_key)
 
     print("=" * 85)
     print(f"{'Map':<14} {'Crates':<7} {'Status':<10} {'Moves':<8} {'Time (s)':<10} {'Validation'}")
@@ -150,8 +162,15 @@ def main():
     total = 0
     passed = 0
 
-    for map_name in map_names:
+    for filename in map_files:
+        # Get map name without extension (e.g., '1' from '1.txt')
+        map_name, _ = os.path.splitext(filename)
+
+        # Try reading by map_name first, falling back to full filename if required by FileReader
         map_data = file_reader.read_file(map_name)
+        if map_data is None:
+            map_data = file_reader.read_file(filename)
+
         if map_data is None:
             print(f"{map_name:<14} {'?':<7} {'NO FILE':<10}")
             continue
@@ -166,6 +185,7 @@ def main():
         solution = bot.solveSokobanPuzzle(map_data.columns, map_data.rows, static_map, items)
         elapsed = time.time() - start
 
+        # TODO: MAP ERROR HANDLING
         if solution == "" or solution is None:
             status = "EMPTY"
             move_count = 0

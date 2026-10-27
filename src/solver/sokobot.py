@@ -389,87 +389,62 @@ def compute_pull_distances(map_data, targets, width, height):
 def calculate_heuristic(crate_positions, target_list, cache, pull_dist):
     """
     Estimate the minimum remaining pushes using optimal crate-to-target
-    assignment with precomputed pull distances (BFS distances that
-    account for walls).
-
-    Uses dynamic programming with bitmasks to find the assignment of
-    crates to targets that minimizes total push distance.
-
-    How it works (simple explanation):
-    - We have N crates and N targets.
-    - We want to assign each crate to a different target.
-    - We try all possible assignments efficiently using binary numbers.
-    - Each bit in a number represents whether a target has been used.
-    - We process crates one by one and for each, try every unused target.
-    - We keep track of the cheapest assignment found so far.
-
-    This is admissible: it never overestimates the true cost because
-    each crate must travel at least the BFS distance to its assigned
-    target, and the optimal assignment gives the lowest total.
-
-    If any crate cannot reach any available target, returns infinity
-    (meaning this state is a deadlock).
+    assignment with precomputed pull distances.
     """
     # Use cache to avoid recalculating for the same crate layout.
     if crate_positions in cache:
         return cache[crate_positions]
 
-    n = len(crate_positions)
-    if n == 0:
+    num_crates = len(crate_positions)
+    num_targets = len(target_list)
+
+    # If there are no crates, cost is 0
+    if num_crates == 0:
         cache[crate_positions] = 0
         return 0
 
+    # If there are no targets or more crates than targets, puzzle is unsolvable
+    if num_targets == 0 or num_crates > num_targets:
+        cache[crate_positions] = float('inf')
+        return float('inf')
+
     INF = float('inf')
 
-    # Precompute distance from each crate to each target.
-    # Uses the pull distance table (BFS) instead of Manhattan distance.
+    # Precompute distance matrix from each crate to each target
     dist = []
-    for i in range(n):
-        crate_pos = crate_positions[i]
+    for crate_pos in crate_positions:
         row_dists = []
-        for j in range(n):
-            target = target_list[j]
+        for target in target_list:
             target_dists = pull_dist.get(target)
             if target_dists is not None and crate_pos in target_dists:
                 d = target_dists[crate_pos]
             else:
-                d = INF  # Crate cannot reach this target at all.
+                d = INF  # Crate cannot reach this target
             row_dists.append(d)
         dist.append(row_dists)
 
-    # dp[mask] = minimum total distance when the first k crates
-    # (k = number of 1-bits in mask) have been assigned to the
-    # targets indicated by the set bits in mask.
-    #
-    # Example with 3 crates:
-    #   mask = 0b000 -> 0 crates assigned, cost = 0
-    #   mask = 0b001 -> crate 0 assigned to target 0
-    #   mask = 0b010 -> crate 0 assigned to target 1
-    #   mask = 0b101 -> crate 0 to target 0, crate 1 to target 2
-    #   mask = 0b111 -> all 3 crates assigned (final answer)
-
-    size = 1 << n  # 2^n possible bitmask values
+    # Bitmask DP over available targets
+    size = 1 << num_targets
     dp = [INF] * size
-    dp[0] = 0  # Starting point: no crates assigned, cost = 0
+    dp[0] = 0  # 0 targets assigned, cost = 0
 
-    for mask in range(size - 1):
+    for mask in range(size):
         if dp[mask] == INF:
             continue
 
-        # Count how many crates are already assigned (number of 1-bits in mask).
-        # This tells us which crate to assign next (crate 0, then 1, etc.)
-        # bin(mask) converts to binary string; .count('1') counts the set bits.
+        # Number of set bits indicates which crate index to assign next
         crate_index = bin(mask).count('1')
+        if crate_index >= num_crates:
+            continue
 
-        # Try assigning this crate to each unused target.
-        for target_index in range(n):
-            # Skip targets that are already used (bit is set).
+        # Try assigning this crate to each unassigned target
+        for target_index in range(num_targets):
             if mask & (1 << target_index):
-                continue
+                continue  # Target already used
 
             d = dist[crate_index][target_index]
             if d == INF:
-                continue  # This crate can't reach this target.
+                continue
 
             new_mask = mask | (1 << target_index)
             new_cost = dp[mask] + d
@@ -477,7 +452,13 @@ def calculate_heuristic(crate_positions, target_list, cache, pull_dist):
             if new_cost < dp[new_mask]:
                 dp[new_mask] = new_cost
 
-    result = dp[size - 1]  # All crates assigned
+    # Find the minimum cost across all masks that assigned all crates
+    result = INF
+    for mask in range(size):
+        if bin(mask).count('1') == num_crates:
+            if dp[mask] < result:
+                result = dp[mask]
+
     cache[crate_positions] = result
     return result
 
